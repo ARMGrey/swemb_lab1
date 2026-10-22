@@ -13,34 +13,6 @@ volatile bool btn_intr_flag     = false;	//Bandera: hubo una pulsacion pendiente
 volatile button_id_e_t  triggering_button = NONE_CAUSE_BTN;		//Boton (BUTTON_1/BUTTON_2) que provoco la ultima pulsacion.
 volatile button_id_e_t	timer_trig_btn = NONE_CAUSE_BTN;
 
-
-static void process_button(button_id_e_t button_id, uint32_t gpio_pin_mask, uint32_t current_time, uint32_t gpios_reg_level){
-	if((current_time - last_time_us[button_id]) < DEBOUNCE_US) return; //Rebote: se ignora.
-	
-	bool is_down = ((gpios_reg_level & gpio_pin_mask) == LOW); //Revisar si el boton del ID esta presionado
-	if(is_down == button_pressed_flag[button_id]) return; //No hubo cambio real.
-	
-	last_time_us[button_id] = current_time; //Actualización del tiempo de interrupcion del boton causante
-	button_pressed_flag[button_id]  = is_down; //Actualización de la bandera de estado del boton+
-
-	if(is_down){
-		//BOTON PRESIONADO: si es el primero que baja, se inicia el conteo de 3 s. Si es otro que baja de nuevo, durante timer3s, no hace nada.
-		if(!button_pressed_flag[1 - button_id]){
-			hold_fired = false;
-			timer_3s_start();
-		}
-	} else {
-		//BOTON SOLTADO: cuenta como pulsacion solo si NO fue un hold de 3 s.
-		if(!hold_fired){ //
-			/*Le avisamos al main que hubo pulso corto diciendelo que hubo intr y de que btn fue*/
-			triggering_button = button_id;
-			btn_intr_flag = true;
-		}
-		//Si ya no hay botones presionados, se cancela el conteo de 3 s.
-		if(!button_pressed_flag[1 - button_id]) timer_3s_stop();
-	}
-}
-
 static void process_red_btn(uint32_t current_time, uint32_t level_gpio_input_reg, bool red_is_pressed, bool blk_is_pressed){
 	if(current_time - last_time_us[BUTTON_RED_CAUSE] < DEBOUNCE_US) return;
 	if(red_is_pressed){
@@ -50,6 +22,10 @@ static void process_red_btn(uint32_t current_time, uint32_t level_gpio_input_reg
 		}
 	}
 	else{
+		if (hold_fired){
+			hold_fired = false;
+			return;
+		}
 		if(!hold_pending){
 			triggering_button = BUTTON_RED_CAUSE;
 			btn_intr_flag = true;
@@ -71,6 +47,10 @@ static void process_blk_btn(uint32_t current_time, uint32_t level_gpio_input_reg
 		}
 	}
 	else{
+		if (hold_fired){ //Ignorar el primer soltado de boton tras un hold
+			hold_fired = false;
+			return;
+		}
 		if(!hold_pending){
 			triggering_button = BUTTON_BLK_CAUSE;
 			btn_intr_flag = true;
@@ -91,11 +71,11 @@ static void IRAM_ATTR gpio_isr(void *arg){
 	uint32_t level_gpio_input_reg = GPIO_IN;  //Se lee DESPUES de limpiar, para tener el nivel mas reciente.
 	uint32_t time_us_now = time_us();
 
-	bool red_pressed_status = (((level_gpio_input_reg & SET_BIT_HIGH(RED_BUTTON)))== LOW);
-	bool blk_pressed_status = (((level_gpio_input_reg & SET_BIT_HIGH(BLACK_BUTTON)))== LOW);	
+	bool red_pressed_status = (((level_gpio_input_reg & (SET_BIT_HIGH(RED_BUTTON))))== LOW);
+	bool blk_pressed_status = (((level_gpio_input_reg & (SET_BIT_HIGH(BLACK_BUTTON))))== LOW);	
 	//SI LA INTERRUPCION FUE CAUSADA POR EL BOTON NEGRO, EJECUTAR:
 	if(intr_reg_status & SET_BIT_HIGH(BLACK_BUTTON)) 
-		process_red_btn(
+		process_blk_btn(
 			time_us_now, 
 			level_gpio_input_reg,
 			red_pressed_status,
@@ -103,7 +83,7 @@ static void IRAM_ATTR gpio_isr(void *arg){
 		);
 	//SI LA INTERRUPCION FUE CAUSADA POR EL BOTON ROJO, EJECUTAR:
 	if(intr_reg_status & SET_BIT_HIGH(RED_BUTTON))   
-		process_blk_btn(
+		process_red_btn(
 			time_us_now, 
 			level_gpio_input_reg,
 			red_pressed_status,
