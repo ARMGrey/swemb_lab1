@@ -46,3 +46,27 @@ esp_err_t gpio_set_output_to(unsigned long gpio_num, bool_voltage_level_e_t set_
 	if(set_to == LOW)	GPIO_OUT_W1TC	= SET_BIT_HIGH(gpio_num); //Poner el gpio especificado en bajo
 	return ESP_OK;
 }
+
+//Configurar interrupcion de flanco descendente
+esp_err_t gpio_neg_edge_interrupt_setup(volatile uint32_t * gpio_pin_reg_addr){
+	*gpio_pin_reg_addr &= ~(0x7UL << 7); //Limpiar configuracion previa
+	*gpio_pin_reg_addr |= (2UL << 7); //flanco descendente
+	*gpio_pin_reg_addr |= (1UL << 15);
+	return ESP_OK;
+}
+
+//Configurar interrupcion de flanco ascendente
+esp_err_t gpio_pos_edge_interrupt_setup(volatile uint32_t * gpio_pin_reg_addr){
+	*gpio_pin_reg_addr &= ~(0x7UL << 7); //Limpiar configuracion previa
+	*gpio_pin_reg_addr |= (1UL << 7); //flanco ascendente
+	*gpio_pin_reg_addr |= (1UL << 15);
+	return ESP_OK;
+}
+
+//Interrupcion en ambos flancos. Para detectar presionar Y soltar (Realmente solo se necesita para el hold de 3s).
+esp_err_t gpio_any_edge_interrupt_setup(volatile uint32_t * gpio_pin_reg_addr){
+	*gpio_pin_reg_addr &= ~(0x7UL << 7);
+	*gpio_pin_reg_addr |= (3UL << 7); //Ambos flancos
+	*gpio_pin_reg_addr |= (1UL << 15);
+	return ESP_OK;
+}

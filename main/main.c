@@ -11,6 +11,7 @@ volatile uint32_t last_time_us[2]		= {0, 0};	//Ultimo tiempo de cada boton. (Ult
 
 volatile bool btn_intr_flag     = false;	//Bandera: hubo una pulsacion pendiente de procesar.
 volatile button_id_e_t  triggering_button = NONE_CAUSE_BTN;		//Boton (BUTTON_1/BUTTON_2) que provoco la ultima pulsacion.
+volatile button_id_e_t	timer_trig_btn = NONE_CAUSE_BTN;
 
 
 static void process_button(button_id_e_t button_id, uint32_t gpio_pin_mask, uint32_t current_time, uint32_t gpios_reg_level){
@@ -40,57 +41,74 @@ static void process_button(button_id_e_t button_id, uint32_t gpio_pin_mask, uint
 	}
 }
 
-static void process_red_btn(){
+static void process_red_btn(uint32_t current_time, uint32_t level_gpio_input_reg, bool red_is_pressed, bool blk_is_pressed){
+	if(current_time - last_time_us[BUTTON_RED_CAUSE] < DEBOUNCE_US) return;
+	if(red_is_pressed){
+		if(timer_trig_btn == NONE_CAUSE_BTN){
+			timer_trig_btn = BUTTON_RED_CAUSE;
+			timer_3s_start();
+		}
+	}
+	else{
+		if(!hold_pending){
+			triggering_button = BUTTON_RED_CAUSE;
+			btn_intr_flag = true;
+		}
+		if(!blk_is_pressed){ 
+			timer_trig_btn = NONE_CAUSE_BTN;
+			timer_3s_stop();
+		}
+	}
 
 }
 
-static void process_blk_btn(){}
+static void process_blk_btn(uint32_t current_time, uint32_t level_gpio_input_reg, bool red_is_pressed, bool blk_is_pressed){
+	if(current_time - last_time_us[BUTTON_BLK_CAUSE] < DEBOUNCE_US) return;
+	if(blk_is_pressed){
+		if(timer_trig_btn == NONE_CAUSE_BTN){
+			timer_trig_btn = BUTTON_BLK_CAUSE;
+			timer_3s_start();
+		}
+	}
+	else{
+		if(!hold_pending){
+			triggering_button = BUTTON_BLK_CAUSE;
+			btn_intr_flag = true;
+		}
+		if(!red_is_pressed){
+			timer_trig_btn = NONE_CAUSE_BTN;
+			 timer_3s_stop();
+		}
+
+	}
+}
 
 //Un unico ISR para ambos GPIO
 static void IRAM_ATTR gpio_isr(void *arg){
 	uint32_t intr_reg_status = GPIO_STATUS;
 	GPIO_STATUS_W1TC = intr_reg_status; //Limpiar solo las banderas que se leyeron
 	
-	uint32_t level_gpio_in_reg = GPIO_IN;  //Se lee DESPUES de limpiar, para tener el nivel mas reciente.
+	uint32_t level_gpio_input_reg = GPIO_IN;  //Se lee DESPUES de limpiar, para tener el nivel mas reciente.
 	uint32_t time_us_now = time_us();
+
+	bool red_pressed_status = (((level_gpio_input_reg & SET_BIT_HIGH(RED_BUTTON)))== LOW);
+	bool blk_pressed_status = (((level_gpio_input_reg & SET_BIT_HIGH(BLACK_BUTTON)))== LOW);	
 	//SI LA INTERRUPCION FUE CAUSADA POR EL BOTON NEGRO, EJECUTAR:
 	if(intr_reg_status & SET_BIT_HIGH(BLACK_BUTTON)) 
-		process_button(
-			BUTTON_BLK_CAUSE, 
-			SET_BIT_HIGH(BLACK_BUTTON), 
+		process_red_btn(
 			time_us_now, 
-			level_gpio_in_reg);
+			level_gpio_input_reg,
+			red_pressed_status,
+			blk_pressed_status
+		);
 	//SI LA INTERRUPCION FUE CAUSADA POR EL BOTON ROJO, EJECUTAR:
 	if(intr_reg_status & SET_BIT_HIGH(RED_BUTTON))   
-		process_button(
-			BUTTON_RED_CAUSE, 
-			SET_BIT_HIGH(RED_BUTTON),   
+		process_blk_btn(
 			time_us_now, 
-			level_gpio_in_reg);
-}
-
-//Configurar interrupcion de flanco descendente
-esp_err_t gpio_neg_edge_interrupt_setup(volatile uint32_t * gpio_pin_reg_addr){
-	*gpio_pin_reg_addr &= ~(0x7UL << 7); //Limpiar configuracion previa
-	*gpio_pin_reg_addr |= (2UL << 7); //flanco descendente
-	*gpio_pin_reg_addr |= (1UL << 15);
-	return ESP_OK;
-}
-
-//Configurar interrupcion de flanco ascendente
-esp_err_t gpio_pos_edge_interrupt_setup(volatile uint32_t * gpio_pin_reg_addr){
-	*gpio_pin_reg_addr &= ~(0x7UL << 7); //Limpiar configuracion previa
-	*gpio_pin_reg_addr |= (1UL << 7); //flanco ascendente
-	*gpio_pin_reg_addr |= (1UL << 15);
-	return ESP_OK;
-}
-
-//Interrupcion en ambos flancos. Para detectar presionar Y soltar (Realmente solo se necesita para el hold de 3s).
-esp_err_t gpio_any_edge_interrupt_setup(volatile uint32_t * gpio_pin_reg_addr){
-	*gpio_pin_reg_addr &= ~(0x7UL << 7);
-	*gpio_pin_reg_addr |= (3UL << 7); //Ambos flancos
-	*gpio_pin_reg_addr |= (1UL << 15);
-	return ESP_OK;
+			level_gpio_input_reg,
+			red_pressed_status,
+			blk_pressed_status
+		);
 }
 
 //Tag de IRAM_ATTR para interrupcion.

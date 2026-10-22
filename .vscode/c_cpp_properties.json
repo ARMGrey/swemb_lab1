@@ -3,7 +3,7 @@
     {
       "name": "ESP-IDF",
       "compilerPath": "",
-      "compileCommands": "c:\\especialidad_embebidos\\software_embebido\\swemb_visual\\SWEMB_Lab1\\build\\compile_commands.json",
+      "compileCommands": "${config:idf.buildPath}/compile_commands.json",
       "intelliSenseMode": "gcc-x86",
       "includePath": [
         "${workspaceFolder}/**"

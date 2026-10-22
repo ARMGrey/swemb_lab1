@@ -25,5 +25,7 @@
     "--background-index",
     "--query-driver=**",
     "--compile-commands-dir=c:\\especialidad_embebidos\\software_embebido\\swemb_visual\\SWEMB_Lab1\\build"
-  ]
+  ],
+  "idf.port": "COM4",
+  "idf.flashType": "UART"
 }

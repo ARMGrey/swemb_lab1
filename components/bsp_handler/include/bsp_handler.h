@@ -46,8 +46,8 @@
 
 //CTEs de pines
 #define SYSTEM_LED	2		//LED Azul de la tarjeta
-#define BLACK_BUTTON 22		//Boton negro
-#define RED_BUTTON 	23		//Boton rojo
+#define BLACK_BUTTON 23		//Boton negro
+#define RED_BUTTON 	22		//Boton rojo
 
 enum{LED_R = 18, LED_G = 19, LED_B = 21}; //Pines del LED RGB.
 
@@ -71,6 +71,12 @@ extern system_data_t system_data;
 esp_err_t gpio_set_as_input(volatile uint32_t *, unsigned long);
 esp_err_t gpio_set_as_output(unsigned long);
 esp_err_t gpio_set_output_to(unsigned long, bool_voltage_level_e_t);
+//Configurar interrupcion de flanco descendente
+esp_err_t gpio_neg_edge_interrupt_setup(volatile uint32_t *);
+//Configurar interrupcion de flanco ascendente
+esp_err_t gpio_pos_edge_interrupt_setup(volatile uint32_t *);
+//Interrupcion en ambos flancos. Para detectar presionar Y soltar (Realmente solo se necesita para el hold de 3s).
+esp_err_t gpio_any_edge_interrupt_setup(volatile uint32_t *);
 
 #include "bsp_timers.h"
 
