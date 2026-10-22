@@ -14,25 +14,25 @@ volatile button_id_e_t  triggering_button = NONE_CAUSE_BTN;		//Boton (BUTTON_1/B
 volatile button_id_e_t	timer_trig_btn = NONE_CAUSE_BTN;
 
 static void process_red_btn(uint32_t current_time, uint32_t level_gpio_input_reg, bool red_is_pressed, bool blk_is_pressed){
-	if(current_time - last_time_us[BUTTON_RED_CAUSE] < DEBOUNCE_US) return;
-	if(red_is_pressed){
-		if(timer_trig_btn == NONE_CAUSE_BTN){
+	if(current_time - last_time_us[BUTTON_RED_CAUSE] < DEBOUNCE_US) return; //Antirrebote
+	if(red_is_pressed){ //Si boton rojo se presiona
+		if(timer_trig_btn == NONE_CAUSE_BTN){ //Si no hay botón causando un trigger del timer, entonces hemos presionado este botón primero.
 			timer_trig_btn = BUTTON_RED_CAUSE;
-			timer_3s_start();
+			timer_3s_start(); //Iniciar timer.
 		}
 	}
-	else{
-		if (hold_fired){
+	else{ //Si boton rojo se suelta 
+		if (hold_fired){ //Si hubo un hold del botón y el soltar implica que no es una pulsación corta hay que ignorarla.
 			hold_fired = false;
 			return;
 		}
-		if(!hold_pending){
+		if(!hold_pending){ //Si no hay un hold pending en el programa
 			triggering_button = BUTTON_RED_CAUSE;
 			btn_intr_flag = true;
 		}
-		if(!blk_is_pressed){ 
-			timer_trig_btn = NONE_CAUSE_BTN;
-			timer_3s_stop();
+		if(!blk_is_pressed){  //Si dejamos de presionar el botón rojo, y tampoco el botón negro está presionado
+			timer_trig_btn = NONE_CAUSE_BTN;  //Ningún botón causó el timer_trig
+			timer_3s_stop(); //Detenemos timer.
 		}
 	}
 
