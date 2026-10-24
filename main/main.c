@@ -13,7 +13,7 @@ volatile bool btn_intr_flag     = false;	//Bandera: hubo una pulsacion pendiente
 volatile button_id_e_t  triggering_button = NONE_CAUSE_BTN;		//Boton (BUTTON_1/BUTTON_2) que provoco la ultima pulsacion.
 volatile button_id_e_t	timer_trig_btn = NONE_CAUSE_BTN;
 
-static void process_red_btn(uint32_t current_time, uint32_t level_gpio_input_reg, bool red_is_pressed, bool blk_is_pressed){
+static void process_red_btn(uint32_t current_time, bool red_is_pressed, bool blk_is_pressed){
 	if(current_time - last_time_us[BUTTON_RED_CAUSE] < DEBOUNCE_US) return; //Antirrebote
 	if(red_is_pressed){ //Si boton rojo se presiona
 		if(timer_trig_btn == NONE_CAUSE_BTN){ //Si no hay botón causando un trigger del timer, entonces hemos presionado este botón primero.
@@ -38,7 +38,7 @@ static void process_red_btn(uint32_t current_time, uint32_t level_gpio_input_reg
 
 }
 
-static void process_blk_btn(uint32_t current_time, uint32_t level_gpio_input_reg, bool red_is_pressed, bool blk_is_pressed){
+static void process_blk_btn(uint32_t current_time, bool red_is_pressed, bool blk_is_pressed){
 	if(current_time - last_time_us[BUTTON_BLK_CAUSE] < DEBOUNCE_US) return;
 	if(blk_is_pressed){
 		if(timer_trig_btn == NONE_CAUSE_BTN){
@@ -57,7 +57,7 @@ static void process_blk_btn(uint32_t current_time, uint32_t level_gpio_input_reg
 		}
 		if(!red_is_pressed){
 			timer_trig_btn = NONE_CAUSE_BTN;
-			 timer_3s_stop();
+			timer_3s_stop();
 		}
 
 	}
@@ -76,16 +76,14 @@ static void IRAM_ATTR gpio_isr(void *arg){
 	//SI LA INTERRUPCION FUE CAUSADA POR EL BOTON NEGRO, EJECUTAR:
 	if(intr_reg_status & SET_BIT_HIGH(BLACK_BUTTON)) 
 		process_blk_btn(
-			time_us_now, 
-			level_gpio_input_reg,
+			time_us_now,
 			red_pressed_status,
 			blk_pressed_status
 		);
 	//SI LA INTERRUPCION FUE CAUSADA POR EL BOTON ROJO, EJECUTAR:
 	if(intr_reg_status & SET_BIT_HIGH(RED_BUTTON))   
 		process_red_btn(
-			time_us_now, 
-			level_gpio_input_reg,
+			time_us_now,
 			red_pressed_status,
 			blk_pressed_status
 		);
