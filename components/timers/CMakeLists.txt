@@ -1,2 +1,2 @@
-idf_component_register(SRCS "bsp_timers.c"
+idf_component_register(SRCS "timers.c"
                     INCLUDE_DIRS "include")

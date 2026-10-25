@@ -1,5 +1,5 @@
-#ifndef BSP_HANDLER_H
-#define BSP_HANDLER_H
+#ifndef HANDLER_H
+#define HANDLER_H
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -78,6 +78,6 @@ esp_err_t gpio_pos_edge_interrupt_setup(volatile uint32_t *);
 //Interrupcion en ambos flancos. Para detectar presionar Y soltar (Realmente solo se necesita para el hold de 3s).
 esp_err_t gpio_any_edge_interrupt_setup(volatile uint32_t *);
 
-#include "bsp_timers.h"
+#include "timers.h"
 
 #endif

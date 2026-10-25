@@ -2,7 +2,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "bsp_handler.h"
+#include "handler.h"
 
 intr_handle_t gpio_handle = NULL;
 

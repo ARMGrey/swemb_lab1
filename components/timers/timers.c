@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "bsp_timers.h"
+#include "timers.h"
 
 volatile bool hold_fired   = false;	//El hold de 3s sucede.
 volatile bool hold_pending = false;	//Bandera: hubo un hold de 3 s, pendiente de procesar en el main.
